@@ -20,11 +20,12 @@ Y = ref_data.coords["Y"]
 
 coor = dict(M=0)
 
-start_times = pd.date_range(start="1999-01-01", end="1999-01-10", freq="D")
-lead_times = list(range(5))
+start_times = pd.date_range(start="1999-01-01", end="1999-01-31", freq="D")
+lead_times = list(range(14))
 
 
 rms = np.zeros((len(start_times), len(lead_times)))
+
 
 
 for i, start_time in enumerate(start_times):
@@ -41,17 +42,25 @@ for i, start_time in enumerate(start_times):
         
         rms[i, j] = np.std(dataA - dataB)
 
+print(rms)
 
 print("Loading matplotlib...")
+import matplotlib as mplt
+mplt.use("TkAgg")
+
+
 import matplotlib.pyplot as plt
 print("done.")
 
-fig, ax = plt.subplots(3, 1)
+fig, ax = plt.subplots(1, 1)
 
 
 im = ax.imshow(rms)
 
 cbar = plt.colorbar(im, ax=ax)
 
+ax.set_ylabel("Start Time")
+ax.set_xlabel("Lead Time")
 
+fig.savefig("lead_start_verify.png", dpi=200)
 plt.show()
