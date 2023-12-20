@@ -50,16 +50,15 @@ def readERA5(dt_rng, dhr, varname, if_downscale = True, inclusive="left"):
         filenames.append(full_filename)
 
     ds = xr.open_mfdataset(filenames)
+
+    # flip latitude
     ds = ds.isel(latitude=slice(None, None, -1))
 
     lat = ds.coords["latitude"].to_numpy()
     lon = ds.coords["longitude"].to_numpy()
 
-    #first_decrease_idx = findfirst( (lon[1:] - lon[:-1]) < 0 )
-    #if first_decrease_idx != -1:
-    #    roll_by = - (first_decrease_idx + 1)
-    #    ds = ds.roll(longitude=roll_by)
 
+    # make longitude 0 the first element
     first_positive_idx = findfirst( lon > 0 )
     if first_positive_idx != -1:
         roll_by = - first_positive_idx
@@ -81,9 +80,9 @@ def readERA5(dt_rng, dhr, varname, if_downscale = True, inclusive="left"):
         
         # We are using the fact that ERA5 resultion is 0.25
         # so the size is picked 5
-        ds[short_varname][:] = scipy.ndimage.uniform_filter(
-            ds[short_varname], size=5, axes=axes,
-        )
+        #ds[short_varname][:] = scipy.ndimage.uniform_filter(
+        #    ds[short_varname], size=5, axes=axes,
+        #)
 
         lon = ds.coords["longitude"].to_numpy()
         lat = ds.coords["latitude"].to_numpy()
@@ -118,6 +117,9 @@ if __name__ == "__main__":
    
     print("Data is read.") 
     print("Load matplotlib...")
+    import matplotlib as mplt
+    mplt.use("TkAgg")
+
     import matplotlib.pyplot as plt
     print("Done")
 

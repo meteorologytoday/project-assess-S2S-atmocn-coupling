@@ -74,4 +74,5 @@ cb_diff = plt.colorbar(mappable_diff, ax=ax[2], orientation="vertical")
 ax[0].set_title("ERA5: %s" % (sel_time.strftime("%Y-%m-%d %H"),) )
 ax[1].set_title("%s: %s" % (S2S_dataset, sel_time.strftime("%Y-%m-%d %H"), ))
 
+fig.savefig("test.png", dpi=200)
 plt.show()
