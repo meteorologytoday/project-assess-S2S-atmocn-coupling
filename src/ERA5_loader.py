@@ -5,7 +5,7 @@ import os
 import pandas as pd
 import scipy
 
-archive_root = "data/ERA5_global"
+archive_root = "ERA5_data"
 
 ERA5_longshortname_mapping = {
     "surface_pressure": "sp",
@@ -61,7 +61,7 @@ def readERA5(dt_rng, dhr, varname, if_downscale = True, inclusive="left"):
 
 
     # make longitude 0 the first element
-    first_positive_idx = findfirst( lon > 0 )
+    first_positive_idx = findfirst( lon >= 0 )
     if first_positive_idx != -1:
         roll_by = - first_positive_idx
         ds = ds.roll(longitude=roll_by).assign_coords(
@@ -88,19 +88,20 @@ def readERA5(dt_rng, dhr, varname, if_downscale = True, inclusive="left"):
 
         lon = ds.coords["longitude"].to_numpy()
         lat = ds.coords["latitude"].to_numpy()
-        first_lon_integer_idx = findfirst( lon % 1.0 == 0.0 )
-        first_lat_integer_idx = findfirst( lat % 1.0 == 0.0 )
+        #first_lon_integer_idx = findfirst( lon % 1.0 == 0.0 )
+        #first_lat_integer_idx = findfirst( lat % 1.0 == 0.0 )
 
+        #print("ERA5 lon: ", lon)
 
-        if first_lat_integer_idx == -1:
-            raise Exception("Cannot find latitude in integer")
+        #if first_lat_integer_idx == -1:
+        #    raise Exception("Cannot find latitude in integer")
 
-        if first_lon_integer_idx == -1:
-            raise Exception("Cannot find longitude in integer")
+        #if first_lon_integer_idx == -1:
+        #    raise Exception("Cannot find longitude in integer")
       
         ds = ds.isel(
-            latitude  = slice(first_lat_integer_idx, None, 4),
-            longitude = slice(first_lon_integer_idx, None, 4),
+            latitude  = slice(0, None, 6),
+            longitude = slice(0, None, 6),
         )
         
 

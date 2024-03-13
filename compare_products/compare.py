@@ -7,7 +7,8 @@ urls = [
 ]
 
 data = []
-varname = "psl"
+varname = "ts"
+
 for i, url in enumerate(urls):
     data.append(xr.open_dataset(url % (varname,), decode_times=True))
 
@@ -23,7 +24,6 @@ print(Y)
 
 coor = dict(L=0, M=0)
 sel_timeA  = pd.Timestamp("1998-01-03")
-sel_timeA2 = pd.Timestamp("1998-01-03")
 sel_timeB = pd.Timestamp("1998-01-07")
 factor = 1e2
 dataA = data[0][varname].isel(**coor).sel(S=sel_timeA) / factor
