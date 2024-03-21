@@ -68,7 +68,8 @@ for model_version in ['GEPS5', "GEPS6"]:
 
 print("Loading matplotlib...")
 import matplotlib as mplt
-mplt.use("TkAgg")
+#mplt.use("TkAgg")
+mplt.use("Agg")
 
 
 import matplotlib.pyplot as plt

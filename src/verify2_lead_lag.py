@@ -6,8 +6,8 @@ import ERA5_loader
 
 
 target_dates = {
-    'GEPS5': pd.Timestamp("2017-01-03"),
-    'GEPS6': pd.Timestamp("2017-01-02"),
+    'GEPS5': pd.Timestamp("2005-02-28"),
+    'GEPS6': pd.Timestamp("2005-02-27"),
 }
 
 prediction_step = 0
@@ -49,7 +49,7 @@ for model_version in model_versions:
 
 
         
-    ECCC_data = ECCC_tools.open_dataset(varset, model_version, target_date)[ECCC_shortvarname].isel(start_time=0, lead_time=prediction_step).sel(number=number)
+    ECCC_data = ECCC_tools.open_dataset("raw", varset, model_version, target_date)[ECCC_shortvarname].isel(start_time=0, lead_time=prediction_step).sel(number=number)
     
     res = np.zeros((len(timedeltas), ))
     for i, timedelta in enumerate(timedeltas):
@@ -67,7 +67,7 @@ for model_version in model_versions:
 
 print("Loading matplotlib...")
 import matplotlib as mplt
-mplt.use("TkAgg")
+mplt.use("Agg")
 
 
 import matplotlib.pyplot as plt
