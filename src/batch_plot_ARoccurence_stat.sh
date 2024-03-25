@@ -1,42 +1,24 @@
 #!/bin/bash
 
-year_beg=1998
-year_end=2017
+region=30N-40N_130W-120W
+input_dir="analysis_ARoccurence_stat/$region"
 
-output_dir=fig_map_prediction_error_global
+fig_dir=fig_ARoccur_stat
 
-mkdir -p $output_dir
-
-for dataset in GEPS6 GEPS5; do
-
-    input_dir=output_fcst_error_90S-90N_0E-1W/ECCC_${dataset}
-
-    #for month in $( seq 1 12 ) ; do
-    for month in 1 12  ; do
-        m_str=$( printf "%02d" $month )
-        for pentad in 0 1 2 3 ; do
-            
-            output=$output_dir/${dataset}_${year_beg}-${year_end}_${m_str}_pentad-${pentad}.png
+mkdir -p $fig_dir
 
 
-            if [ -f "$output" ] ; then
-                echo "Output file $output exists. Skip."
-            else
-                python3 plot_map_prediction_error.py \
-                    --input-dir $input_dir \
-                    --dataset-name $dataset \
-                    --year-rng $year_beg $year_end \
-                    --month $month \
-                    --pentad $pentad \
-                    --no-display \
-                    --output $output &
-            fi
-            
-        done
+#for months in "10" "11" "12" "01" "02" "03" "12-01-02"; do
+for months in "10-11-12-01-02-03"; do
 
-        sleep 1
-    done
+    input_file1="$input_dir/ECCC-S2S_GEPS5_ARoccur-stat_${months}.nc"
+    input_file2="$input_dir/ECCC-S2S_GEPS6_ARoccur-stat_${months}.nc"
+
+    python3 plot_ARoccurence_stat.py \
+        --input-files $input_file1 $input_file2 \
+        --dataset-names GEPS5 GEPS6 \
+        --output $fig_dir/ARoccur-stat_${months}.png \
+        --title "Month: $months" \
+        --no-display
+
 done
-
-
-wait

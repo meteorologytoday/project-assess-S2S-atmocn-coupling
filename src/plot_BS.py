@@ -23,8 +23,15 @@ if len(args.input_files) != len(args.dataset_names):
 N = len(args.input_files)
 
 data = dict()
+
+N_of_categories = None
 for i in range(N):
-    data[args.dataset_names[i]] = xr.open_dataset(args.input_files[i])
+    ds = xr.open_dataset(args.input_files[i])
+    data[args.dataset_names[i]] = ds
+
+    if N_of_categories is None:
+        N_of_categories = ds.dims["category"]
+
 
 
 print("Loading matplotlib...")
@@ -47,8 +54,8 @@ print("done")
 
 from scipy.stats import ttest_ind_from_stats
 
-ncol=1
-nrow=1
+ncol = N_of_categories
+nrow = 1
 
 figsize, gridspec_kw = tool_fig_config.calFigParams(
     w = 6,
@@ -76,19 +83,30 @@ if args.title != "":
     fig.suptitle(args.title)
 
 for i, (dataset_name, ds) in enumerate(data.items()):
-    
+        
     c = ["red", "blue"][i]
 
-    d = ds["ARoccur_corr"].to_numpy()[0, :]
-    ax.plot(ds.coords["week"], d, color=c, label=dataset_name)
-    ax.scatter(ds.coords["week"], d, s=20, c=c)
+    for j in range(N_of_categories):    
+       
+        _ax = ax[j]
+        
+        BS_ECCC = ds["BS_ECCC"].isel(month_group=0, category=j)
+        BS_clim = ds["BS_clim"].isel(month_group=0, category=j)
+       
+        BSS = 1.0 - BS_ECCC / BS_clim
+ 
+        _ax.plot(ds.coords["week"], BSS, color=c, linestyle="solid", label=dataset_name)
+        _ax.scatter(ds.coords["week"], BSS, s=20, c=c)
 
-ax.set_ylim([-0.2, 1])
-ax.legend()
-ax.grid()
+        _ax.set_title("Category : %d" % (j, ))
 
-ax.set_xlabel("Lead week")
-ax.set_ylabel("Correlation")
+for _ax in ax.flatten(): 
+    _ax.set_ylim([-0.2, 1])
+    _ax.legend()
+    _ax.grid()
+
+    _ax.set_xlabel("Lead week")
+    _ax.set_ylabel("Correlation")
 
 if not args.no_display:
     print("Showing figure")
