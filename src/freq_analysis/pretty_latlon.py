@@ -55,4 +55,32 @@ def pretty_latlon(lat=None, lon=None, fmt=None):
 
     return dict(lat=lat_str, lon=lon_str)
 
+if __name__ == "__main__":
 
+    import argparse
+    parser = argparse.ArgumentParser(
+                        prog = 'make_ECCC_AR_objects.py',
+                        description = 'Postprocess ECCO data (Mixed-Layer integrated).',
+    )
+
+    parser.add_argument('--func', type=str, required=True, choices=["box",])
+    parser.add_argument('--fmt', type=str, default="default", choices=["int", "default"])
+    parser.add_argument('--lat-rng', type=float, nargs=2, default=None)
+    parser.add_argument('--lon-rng', type=float, nargs=2, default=None)
+    args = parser.parse_args()
+    #print(args)
+    
+    result = "UNKNOWN"
+    
+    if args.fmt == "int":
+        default_fmt = "%d"
+
+    if args.func == "box":
+        
+        result = "%s-%s_%s-%s" % (
+            pretty_lat(args.lat_rng[0]), pretty_lat(args.lat_rng[1]),
+            pretty_lon(args.lon_rng[0]), pretty_lon(args.lon_rng[1]),
+        )
+
+    print(result)
+        

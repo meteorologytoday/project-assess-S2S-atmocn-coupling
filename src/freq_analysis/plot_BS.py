@@ -34,6 +34,21 @@ for i in range(N):
 
 
 
+ds_mean = None
+cnt = 0
+for k, ds in data.items():
+
+    if cnt == 0:
+        ds_mean = ds.copy()
+
+    else:
+        ds_mean += ds
+
+    cnt += 1
+ds_mean /= cnt
+
+
+
 print("Loading matplotlib...")
 
 import matplotlib as mplt
@@ -91,10 +106,16 @@ for i, (dataset_name, ds) in enumerate(data.items()):
         _ax = ax[j]
         
         BS_ECCC = ds["BS_ECCC"].isel(month_group=0, category=j)
-        BS_clim = ds["BS_clim"].isel(month_group=0, category=j)
+        BS_clim = ds_mean["BS_clim"].isel(month_group=0, category=j)
        
         BSS = 1.0 - BS_ECCC / BS_clim
  
+        #_ax.plot(ds.coords["week"], BS_ECCC, color=c, linestyle="solid", label=dataset_name)
+        #_ax.plot(ds.coords["week"], BS_clim, color=c, linestyle="dashed", label=dataset_name)
+        
+        #_ax.scatter(ds.coords["week"], BS_ECCC, s=20, c=c)
+        #_ax.scatter(ds.coords["week"], BS_clim, s=20, c=c)
+        
         _ax.plot(ds.coords["week"], BSS, color=c, linestyle="solid", label=dataset_name)
         _ax.scatter(ds.coords["week"], BSS, s=20, c=c)
 

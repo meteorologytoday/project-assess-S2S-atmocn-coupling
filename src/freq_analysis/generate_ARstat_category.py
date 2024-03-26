@@ -67,7 +67,7 @@ print("### rectifile_flag = ", rectifile_flag)
 print("### rectifile_threshold = ", rectifile_threshold)
 
 
-categories = ["CATE0_NOAR", "CATE1_MOAR"]#, "CATE2_HIAR"]
+categories = ["CATE0_NOAR", "CATE1_MOAR", "CATE2_HIAR"]
 number_of_categories = len(categories)
 # inclusive
 year_rng = args.year_rng
@@ -108,13 +108,13 @@ def classify_AR(xa, rectifile=False, rectifile_threshold=0):
 
     if sum_x == 0:
         category = CATE0_NOAR
-    elif sum_x > 0:
-        category = CATE1_MOAR
-#
-#    elif sum_x <= 2:
+#    elif sum_x > 0:
 #        category = CATE1_MOAR
-#    elif sum_x > 2:
-#        category = CATE2_HIAR
+#
+    elif sum_x <= 2:
+        category = CATE1_MOAR
+    elif sum_x > 2:
+        category = CATE2_HIAR
 
     else:
         raise Exception("Unable to classify_AR. sum_x = %s" % (str(sum_x),))
