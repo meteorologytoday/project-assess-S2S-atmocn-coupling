@@ -8,7 +8,7 @@ import random
 import xarray as xr
 import numpy as np
 import pandas as pd
-import ERAinterim_loader
+import ERA5_loader
 import traceback
 
 import pretty_latlon
@@ -44,8 +44,6 @@ sel_lon = np.arange(beg_lon, end_lon + 0.5, 1)
 
 
 output_root_dir = "./output_fcst_error_%s-%s_%s-%s" % (
-#    pd.Timestamp(args.beg_date).strftime("%Y-%m"),
-#    pd.Timestamp(args.end_date).strftime("%Y-%m"),
     pretty_latlon.pretty_lat(beg_lat), pretty_latlon.pretty_lat(end_lat),
     pretty_latlon.pretty_lon(beg_lon), pretty_latlon.pretty_lon(end_lon),
 )
@@ -185,7 +183,7 @@ def work(dt, pent, varname, start_times, lead_times, dataset, output_filename):
         Eabsmean = np.zeros_like(output_ds["%s_Eabsmean" % (varname,)])
                 
         varname_ECCC = varname_ECCC_mapping[varname]
-        varname_ERAinterim = ERAinterim_loader.ERAinterim_longshortname_mapping[varname]
+        varname_ERA5 = ERA5_loader.ERA5_longshortname_mapping[varname]
 
         for k, start_time in enumerate(valid_start_times):
 
@@ -195,7 +193,7 @@ def work(dt, pent, varname, start_times, lead_times, dataset, output_filename):
      
                 _ds = (ds.sel(L=lead_time))[varname_ECCC].sel(X=sel_lon, Y=sel_lat)
                 
-                ref_data = ERAinterim_loader.readERAinterim(start_time + lead_time - hr12, 24, varname)[varname_ERAinterim].isel(time=0).sel(longitude=sel_lon, latitude=sel_lat).to_numpy()
+                ref_data = ERA5_loader.readERA5(start_time + lead_time - hr12, 24, varname)[varname_ERA5].isel(time=0).sel(longitude=sel_lon, latitude=sel_lat).to_numpy()
 
                 for ens in range(ens_N):
                     

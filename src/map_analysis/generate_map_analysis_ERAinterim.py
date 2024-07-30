@@ -12,7 +12,7 @@ import os
 import pretty_latlon
 pretty_latlon.default_fmt = "%d"
 
-import ERA5_loader
+import ERAinterim_loader
 
 model_versions = ["GEPS5", "GEPS6"]
 
@@ -27,8 +27,8 @@ parser.add_argument('--year-rng', type=int, nargs=2, required=True)
 parser.add_argument('--output-root', type=str, required=True)
 parser.add_argument('--ECCC-postraw', type=str, required=True)
 parser.add_argument('--ECCC-varset', type=str, required=True)
-#parser.add_argument('--ERA5-varset', type=str, required=True)
-parser.add_argument('--ERA5-varset', type=str, required=True)
+#parser.add_argument('--ERAinterim-varset', type=str, required=True)
+parser.add_argument('--ERAinterim-varset', type=str, required=True)
 parser.add_argument('--varname', type=str, required=True)
 parser.add_argument('--nproc', type=int, default=1)
 args = parser.parse_args()
@@ -42,7 +42,7 @@ year_rng = args.year_rng
 days_per_pentad = 5
 
 #ERAinterim_archive_root = "data/ERAinterim"
-reanalysis_archive_root = "data/ERA5_global"
+reanalysis_archive_root = "data/ERAinterim_global"
 
 
 def doJob(job_detail, detect_phase = False):
@@ -61,8 +61,8 @@ def doJob(job_detail, detect_phase = False):
         ECCC_varname = job_detail['ECCC_varname']
         ECCC_varset = job_detail['ECCC_varset']
         ECCC_postraw = job_detail['ECCC_postraw']
-        ERA5_varset = job_detail['ERA5_varset']
-        ERA5_varname = job_detail['ERA5_varname']
+        ERAinterim_varset = job_detail['ERAinterim_varset']
+        ERAinterim_varname = job_detail['ERAinterim_varname']
 
         start_year  = start_ym.year
         start_month = start_ym.month
@@ -146,12 +146,12 @@ def doJob(job_detail, detect_phase = False):
                     start_time_plus_lead_time = start_time + lead_time
 
                     #print("start_time_plus_lead_time = ", start_time_plus_lead_time) 
-                    ref_data = ERA5_loader.open_dataset_ERA5(
+                    ref_data = ERAinterim_loader.open_dataset_ERAinterim(
                         start_time + lead_time - pd.Timedelta(days=1),
                         24,
-                        ERA5_varset,
-                        ERA5_varname
-                    )[ERA5_varname].isel(time=0)
+                        ERAinterim_varset,
+                        ERAinterim_varname
+                    )[ERAinterim_varname].isel(time=0)
 
                     # Interpolation
                     #print("ref_data: ", ref_data.coords["latitude"].to_numpy())
@@ -238,8 +238,8 @@ for model_version in model_versions:
             ECCC_postraw = args.ECCC_postraw,
             ECCC_varset = args.ECCC_varset,
             ECCC_varname = args.varname,
-            ERA5_varset = args.ERA5_varset,
-            ERA5_varname = args.varname,
+            ERAinterim_varset = args.ERAinterim_varset,
+            ERAinterim_varname = args.varname,
         )
 
         print("[Detect] Checking year-month = %s" % (start_ym.strftime("%Y-%m"),))

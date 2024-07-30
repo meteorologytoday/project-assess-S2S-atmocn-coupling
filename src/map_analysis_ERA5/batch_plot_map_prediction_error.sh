@@ -25,6 +25,10 @@ params=(
     AR IVT_y
 )
 
+params=(
+    surf_inst msl
+)
+
 
 
 nparams=2
@@ -40,7 +44,7 @@ for (( i=0 ; i < $(( ${#params[@]} / $nparams )) ; i++ )); do
 
         echo ":::: model_version = $model_version"
 
-        input_dir=output_map_analysis/${model_version}
+        input_dir=output_map_analysis_ERA5/${model_version}
 
         #for month in $( seq 1 12 ) ; do
         for month in 1 12  ; do
