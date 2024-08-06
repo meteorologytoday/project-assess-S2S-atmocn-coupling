@@ -22,6 +22,7 @@ parser.add_argument('--output', type=str, help='Output directory.', default="")
 parser.add_argument('--plot-lat-rng', type=float, nargs=2, help='Plot range of latitude', default=[-90, 90])
 parser.add_argument('--plot-lon-rng', type=float, nargs=2, help='Plot range of latitude', default=[0, 360])
 
+
 parser.add_argument('--no-display', action="store_true")
 args = parser.parse_args()
 
@@ -324,7 +325,8 @@ mappable = _ax.contourf(
 )
 
 # Plot the standard deviation
-_contour = (data[0]["total_Estd"] + data[1]["total_Estd"]) / 2 / plot_info["factor"]
+_contour = ( (data[0]["total_Estd"]**2 + data[1]["total_Estd"]**2)**0.5 / plot_info["factor"]
+#_contour = (data[0]["total_Estd"] + data[1]["total_Estd"]) / 2 / plot_info["factor"]
 cs = _ax.contour(coords["longitude"], coords["latitude"], _contour, levels=plot_info["contour_levels"], colors="k", linestyles='-',linewidths=1, transform=proj_norm, alpha=0.8, zorder=10)
 _ax.clabel(cs, fmt="%.1f")
 

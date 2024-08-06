@@ -1,3 +1,5 @@
+print("Load libraries...")
+
 from multiprocessing import Pool
 import multiprocessing
 from pathlib import Path
@@ -5,6 +7,7 @@ import numpy as np
 import xarray as xr
 import pandas as pd
 import argparse
+import shared_info
 
 
 import traceback
@@ -15,6 +18,8 @@ pretty_latlon.default_fmt = "%d"
 import ECCC_tools
 import ERA5_loader
 
+print("Done.")
+
 model_versions = ["GEPS5", "GEPS6"]
 
 parser = argparse.ArgumentParser(
@@ -23,13 +28,12 @@ parser = argparse.ArgumentParser(
 )
 
 #parser.add_argument('--start-months', type=int, nargs="+", required=True)
-parser.add_argument('--lead-pentads', type=int, default=6)
-parser.add_argument('--days-per-pentad', type=int, default=5)
 parser.add_argument('--year-rng', type=int, nargs=2, required=True)
 parser.add_argument('--output-root', type=str, required=True)
 parser.add_argument('--ECCC-postraw', type=str, required=True)
 parser.add_argument('--ECCC-varset', type=str, required=True)
 parser.add_argument('--ERA5-varset', type=str, required=True)
+parser.add_argument('--mask-file', type=str, required=True)
 parser.add_argument('--ERA5-freq', type=str, required=True)
 parser.add_argument('--levels', nargs="+", type=int, help="If variable is 3D.", default=None)
 parser.add_argument('--varname', type=str, required=True)
@@ -39,10 +43,19 @@ print(args)
 
 output_root = args.output_root
 
+mask_ds = xr.open_dataset(args.mask_file)
+regions = mask_ds.coords["region"].to_numpy()
+
+print("Regions found: ", regions)
+region_flags = {
+    region : mask_ds["mask"].sel(region=region) == True for region in regions
+}
+
+
 # inclusive
 year_rng = args.year_rng
-days_per_pentad = args.days_per_pentad
-ECCC_tools.archive_root = os.path.join("S2S", "ECCC", "data20_20240723")
+
+ECCC_tools.archive_root = os.path.join(shared_info.ECCC_archive_root)
 
 
 ERA5_freq = args.ERA5_freq
@@ -90,7 +103,7 @@ def doJob(job_detail, detect_phase = False):
             job_detail['model_version'], 
         )
 
-        output_file = "ECCC-S2S_{model_version:s}_{varset:s}::{varname:s}_{start_ym:s}.nc".format(
+        output_file = "ECCC-S2S_regional_{model_version:s}_{varset:s}::{varname:s}_{start_ym:s}.nc".format(
             model_version = job_detail['model_version'],
             varset        = ECCC_varset,
             varname       = ECCC_varname,
@@ -147,9 +160,20 @@ def doJob(job_detail, detect_phase = False):
         variable3D = "level" in aux_ds[ECCC_varname].dims
         do_level_sel = variable3D and args.levels is not None
             
+        dim_ECCC = (
+            len(start_times),
+            len(aux_ds.coords["lead_time"]),
+            len(aux_ds.coords["number"]),
+            len(regions),
+        )
 
-        
-        dim_cnt = (1, args.lead_pentads)
+        dim_ref = (
+            len(start_times),
+            len(aux_ds.coords["lead_time"]),
+            len(regions),
+        )
+
+
         if variable3D:
             if args.levels is None:
                 nlev = aux_ds.dims["level"]
@@ -157,110 +181,102 @@ def doJob(job_detail, detect_phase = False):
             else:
                 nlev = len(args.levels)
 
-            dim_E   = (1, args.lead_pentads, nlev, aux_ds.dims["latitude"], aux_ds.dims["longitude"])
-        else:
-            dim_E   = (1, args.lead_pentads, aux_ds.dims["latitude"], aux_ds.dims["longitude"])
+            dim_ECCC = (*dim_ECCC, nlev, )
+            dim_ref  = (*dim_ref,  nlev, )
             
-        total_cnt = np.zeros(dim_cnt)
-        Emean     = np.zeros(dim_E)
-        E2mean    = np.zeros(dim_E)
+        var_ECCC_mean  = np.zeros(dim_ECCC)
+        var_ref_mean   = np.zeros(dim_ref)
 
         # This variable is used to adjust the time specifiction
         # between ECCC and ERA5.
         # For example, sst is a daily average, the first lead time is 12 hours (12Z) whereas I 
         # stored the average time as 00Z.
-
+        
         if ERA5_freq == "daily_mean": 
             ERA5_time_adjustment = - pd.Timedelta(hours=12)
         else:
             ERA5_time_adjustment = - pd.Timedelta(days=1)
- 
-        for k, start_time in enumerate(start_times):
+         
+        for st, start_time in enumerate(start_times):
 
             print("start_time: ", start_time)
         
             ds_ECCC = ECCC_tools.open_dataset(ECCC_postraw, ECCC_varset, model_version, start_time).isel(start_time=0)
             
-            for p in range(args.lead_pentads):
+            for lt, lead_time in enumerate(aux_ds.coords["lead_time"].to_numpy()):
+            
+                #print("lead_time: ", lead_time)
                 
-                _ds_ECCC = ds_ECCC[ECCC_varname].isel(lead_time=slice(days_per_pentad*p, days_per_pentad*(p+1)))
-
+                _ds_ECCC = ds_ECCC[ECCC_varname].isel(lead_time=lt)
+                
                 if do_level_sel:
                     _ds_ECCC = _ds_ECCC.sel(level=args.levels)
 
-                for lead_time in _ds_ECCC.coords["lead_time"].to_numpy():
-                   
-                    start_time_plus_lead_time = start_time + lead_time
+                start_time_plus_lead_time = start_time + lead_time
+                    
+                ref_data = ERA5_loader.open_dataset_ERA5(
+                    start_time + lead_time + ERA5_time_adjustment,
+                    ERA5_freq,
+                    ERA5_varset,
+                )[ERA5_varname].isel(time=0)
+                
+                if do_level_sel:
+                    ref_data = ref_data.sel(level=args.levels)
+                
+                    
+                if args.varname == "geopotential":
+                    ref_data /= 9.81 
 
-                    #print("start_time_plus_lead_time = ", start_time_plus_lead_time) 
-                    ref_data = ERA5_loader.open_dataset_ERA5(
-                        start_time + lead_time + ERA5_time_adjustment,
-                        ERA5_freq,
-                        ERA5_varset,
-                    )[ERA5_varname].isel(time=0)
+                # Interpolation
+                #print("ref_data: ", ref_data.coords["latitude"].to_numpy())
+                #print("_ds_ECCC: ", _ds_ECCC.coords["latitude"].to_numpy())
+                ref_data = ref_data.interp(
+                    coords=dict(
+                        latitude  = _ds_ECCC.coords["latitude"],
+                        longitude = _ds_ECCC.coords["longitude"],
+                    ),
+                )
+                
+                #ref_data = ref_data.to_numpy()
 
-                    if do_level_sel:
-                        ref_data = ref_data.sel(level=args.levels)
 
-
-                    if args.varname == "geopotential":
-                        ref_data /= 9.81 
-
-                    # Interpolation
-                    #print("ref_data: ", ref_data.coords["latitude"].to_numpy())
-                    #print("_ds_ECCC: ", _ds_ECCC.coords["latitude"].to_numpy())
-                    ref_data = ref_data.interp(
-                        coords=dict(
-                            latitude  = _ds_ECCC.coords["latitude"],
-                            longitude = _ds_ECCC.coords["longitude"],
-                        ),
-                    )
-
-                    ref_data = ref_data.to_numpy()
-
-                    for number in _ds_ECCC.coords["number"]:
-                        #print(_ds_ECCC) 
-                        fcst_data = _ds_ECCC.sel(lead_time=lead_time, number=number).to_numpy()
-                        #print(fcst_data.shape)
-                        Emean[0, p]     += fcst_data - ref_data
-                        E2mean[0, p]    += (fcst_data - ref_data)**2
-                        total_cnt[0, p] += 1
-
-        if variable3D:
-            ttl_cnt_ext = total_cnt[:, :, None, None, None]
-        else:
-            ttl_cnt_ext = total_cnt[:, :, None, None]
+                        
+                for j, region in enumerate(regions):
             
-        Emean     /= ttl_cnt_ext
-        E2mean    /= ttl_cnt_ext
-        
-        print("Total count = ", total_cnt)
-        
+                    region_flag = region_flags[region]
+                    avg_ECCC_da = _ds_ECCC.where(region_flag).mean(dim=["latitude", "longitude"], skipna=True, )
+                    avg_ref_da  = ref_data.where(region_flag).mean(dim=["latitude", "longitude"], skipna=True, )
+
+                    print("avg_ECCC_da: " , avg_ECCC_da) 
+                    print("avg_ref_da: " , avg_ref_da) 
+                    var_ECCC_mean[st, lt, :, j] = avg_ECCC_da.to_numpy() 
+                    var_ref_mean[st, lt, j] = avg_ref_da.to_numpy() 
 
         # prepping for output
- 
         coords=dict(
-            start_ym=[start_ym,],
-            latitude=aux_ds.coords["latitude"],
-            longitude=aux_ds.coords["longitude"],
+            start_time=aux_ds.coords["start_time"],
+            lead_time=aux_ds.coords["lead_time"],
+            number=aux_ds.coords["number"],
+            region=regions,
         )
 
+            
+        dim_list_ECCC  = ["start_time", "lead_time", "number",] 
+        dim_list_ref   = ["start_time", "lead_time",] 
         if variable3D:
-            dim_E   = ["start_ym", "lead_pentad", "level", "latitude", "longitude"] 
+            dim_list_ECCC   += ["level",]
+            dim_list_ref    += ["level,"]
             if args.levels is None:
                 coords["level"] = aux_ds.coords["level"]
             else:
                 coords["level"] = (["level",], np.array(args.levels, dtype=float))
-        
 
-        else:
-            dim_E   = ["start_ym", "lead_pentad", "latitude", "longitude"]
 
         _tmp = dict()
-        _tmp["%s_Emean" % ECCC_varname]  = (dim_E, Emean)
-        _tmp["%s_E2mean" % ECCC_varname]  = (dim_E, E2mean)
-        _tmp["total_cnt"] = (["start_ym", "lead_pentad"], total_cnt,)
- 
+
+        _tmp["ECCC_%s" % (ECCC_varname, )]  = (dim_list, var_ECCC_mean)
+        _tmp["ERA5_%s" % (ECCC_varname, )]  = (dim_list, var_ref_mean)
+
         output_ds = xr.Dataset(
             data_vars=_tmp,
             coords=coords,

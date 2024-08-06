@@ -27,8 +27,9 @@ print(args)
 
 test_dt = pd.Timestamp(args.test_date)
 
-ocean_regions = [
+regions = [
     "ALL", 
+    "NW-PAC", "NE-PAC",
     "N-PAC", "T-PAC", "S-PAC",
     "T-IND", "S-IND",
     "N-ATL", "T-ATL", "S-ATL",
@@ -49,31 +50,31 @@ ds = ECCC_tools.open_dataset("raw", "surf_avg", model_version, test_dt)
 test_da = ds["sst"].isel(start_time=0, lead_time=0, number=0)
 
 mask = xr.apply_ufunc(np.isfinite, test_da)
-base_ocean_mask = mask.to_numpy().astype(int)
+base_mask = mask.to_numpy().astype(int)
 
 # Copy is necessary so that the value can be assigned later
 mask = mask.expand_dims(
-    dim = dict(ocean_region=ocean_regions),
+    dim = dict(region=regions),
     axis=0,
-).rename("ocean_mask").copy()
+).rename("mask").copy()
 
-ocean_masks = np.zeros(
-    (len(ocean_regions), len(mask.coords["latitude"]), len(mask.coords["longitude"]),),
+masks = np.zeros(
+    (len(regions), len(mask.coords["latitude"]), len(mask.coords["longitude"]),),
     dtype=int,
 )
 
-for i, ocean_region in enumerate(ocean_regions):
+for i, region in enumerate(regions):
    
-    print("Making region: ", ocean_region) 
-    _mask = mask.sel(ocean_region=ocean_region).copy()
+    print("Making region: ", region) 
+    _mask = mask.sel(region=region).copy()
     
-    if ocean_region == "ARC":
+    if region == "ARC":
         
         _mask = _mask.where(
             (_mask.latitude > 60) 
         )
  
-    elif ocean_region == "N-PAC":
+    elif region == "N-PAC":
         
         _mask = _mask.where(
             (_mask.latitude > 30) &
@@ -81,8 +82,26 @@ for i, ocean_region in enumerate(ocean_regions):
             (_mask.longitude > 120) &
             (_mask.longitude <= 250) 
         )
+ 
+    elif region == "NE-PAC":
+        
+        _mask = _mask.where(
+            (_mask.latitude > 30) &
+            (_mask.latitude <= 60) &
+            (_mask.longitude > 180) &
+            (_mask.longitude <= 250) 
+        )
+ 
+    elif region == "NW-PAC":
+        
+        _mask = _mask.where(
+            (_mask.latitude > 30) &
+            (_mask.latitude <= 60) &
+            (_mask.longitude > 120) &
+            (_mask.longitude <= 180) 
+        )
     
-    elif ocean_region == "T-PAC":
+    elif region == "T-PAC":
         
         _mask = _mask.where(
             (_mask.latitude <= 30) &
@@ -91,7 +110,7 @@ for i, ocean_region in enumerate(ocean_regions):
             (_mask.longitude <= 260) 
         )
  
-    elif ocean_region == "S-PAC":
+    elif region == "S-PAC":
         
         _mask = _mask.where(
             (_mask.latitude <= -30) &
@@ -100,7 +119,7 @@ for i, ocean_region in enumerate(ocean_regions):
             (_mask.longitude <= 290) 
         )
  
-    elif ocean_region == "T-IND":
+    elif region == "T-IND":
         
         _mask = _mask.where(
             (_mask.latitude <= 30) &
@@ -109,7 +128,7 @@ for i, ocean_region in enumerate(ocean_regions):
             (_mask.longitude <= 120) 
         )
  
-    elif ocean_region == "S-IND":
+    elif region == "S-IND":
         
         _mask = _mask.where(
             (_mask.latitude <= -30) &
@@ -117,7 +136,7 @@ for i, ocean_region in enumerate(ocean_regions):
             (_mask.longitude > 25) &
             (_mask.longitude <= 120) 
         )
-    elif ocean_region == "N-ATL":
+    elif region == "N-ATL":
         
         _mask = _mask.where(
             (
@@ -135,7 +154,7 @@ for i, ocean_region in enumerate(ocean_regions):
             ) 
         )
  
-    elif ocean_region == "T-ATL":
+    elif region == "T-ATL":
         
         _mask = _mask.where(
             (
@@ -148,7 +167,7 @@ for i, ocean_region in enumerate(ocean_regions):
             ) 
         )
  
-    elif ocean_region == "S-ATL":
+    elif region == "S-ATL":
         
         _mask = _mask.where(
             (
@@ -162,7 +181,7 @@ for i, ocean_region in enumerate(ocean_regions):
             ) 
         )
  
-    elif ocean_region == "SO":
+    elif region == "SO":
         
         _mask = _mask.where(
             (_mask.latitude <= -60)
@@ -170,9 +189,9 @@ for i, ocean_region in enumerate(ocean_regions):
  
  
     _mask = xr.apply_ufunc(np.isfinite, _mask)
-    mask[i, :, :] = _mask.to_numpy().astype(int) * base_ocean_mask
+    mask[i, :, :] = _mask.to_numpy().astype(int) * base_mask
 
-#mask[:, :, :] = ocean_masks
+#mask[:, :, :] = masks
 
 new_ds = xr.merge([mask, ])
 new_ds.to_netcdf(args.output)

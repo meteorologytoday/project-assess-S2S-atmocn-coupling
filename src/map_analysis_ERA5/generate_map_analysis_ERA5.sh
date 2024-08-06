@@ -33,17 +33,26 @@ params=(
 
 params=(
     raw surf_inst inst mean_sea_level_pressure mean_sea_level_pressure
-    postprocessed hf_surf_inst inst mean_surface_sensible_heat_flux mean_surface_sensible_heat_flux
-    postprocessed hf_surf_inst inst mean_surface_latent_heat_flux mean_surface_latent_heat_flux
     postprocessed AR inst AR IVT
     postprocessed AR inst AR IVT_x
     postprocessed AR inst AR IVT_y
     postprocessed AR inst AR IWV
+    postprocessed hf_surf_inst inst mean_surface_sensible_heat_flux mean_surface_sensible_heat_flux
+    postprocessed hf_surf_inst inst mean_surface_latent_heat_flux mean_surface_latent_heat_flux
+)
+
+params=(
+    postprocessed AR inst AR IWV
+    postprocessed AR inst AR IVT
+    postprocessed AR inst AR IVT_x
+    postprocessed AR inst AR IVT_y
+    raw surf_inst inst mean_sea_level_pressure mean_sea_level_pressure
 )
 
 params=(
     raw UVTZ inst geopotential geopotential
 )
+
 
 
 nparams=5
