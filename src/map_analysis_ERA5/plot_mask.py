@@ -19,11 +19,12 @@ ds = xr.open_dataset(args.input_file)
 
 
 regions = [
-    "NW-PAC", "NE-PAC", "N-ATL", "T-PAC", "T-ATL",
+    "NW-PAC", "NE-PAC", "N-ATL", "NT-ATL", #"T-PAC", "T-ATL",
+    "NDT-PAC", "NST-PAC", "NT-IND",
 ]
 
 hatch_styles = [
-    ".", "/", "-", "*", "|",
+    ".", "/", "-", "*", "|", "x", "o", "\\",
 ]
 
 region_label_coords = {
@@ -33,6 +34,12 @@ region_label_coords = {
     "N-ATL" : (330.0, 45.0),
     "T-PAC" : (190.0, 15.0),
     "T-ATL" : (320.0, 15.0),
+    "DT-PAC" :  (190.0, 0.0),
+    "NST-PAC" :  (190.0, (15+30)/2),
+    "T-IND" :  (75.0, 15.0),
+    "NT-ATL" :   (320.0, 7.5),
+    "NT-IND" :   (75.0,  7.5),
+    "NDT-PAC" :  (190,   7.5),
 }
 
 

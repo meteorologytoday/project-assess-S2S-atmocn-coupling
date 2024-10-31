@@ -13,7 +13,7 @@ pretty_latlon.default_fmt = "%d"
 import ECCC_tools
 import ERA5_loader
 
-model_versions = ["GEPS5", "GEPS6"]
+model_versions = ["GEPS6sub1", "GEPS5", "GEPS6"]
 
 parser = argparse.ArgumentParser(
                     prog = 'make_ECCC_AR_objects.py',

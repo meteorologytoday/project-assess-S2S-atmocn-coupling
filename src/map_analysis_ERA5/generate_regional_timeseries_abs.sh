@@ -2,7 +2,7 @@
 
 
 
-nproc=1
+nproc=20
 
 # Params:
 
@@ -38,6 +38,7 @@ for (( i=0 ; i < $(( ${#params[@]} / $nparams )) ; i++ )); do
         --year-rng 1998 2017 \
         --mask-file mask_westcoast.nc \
         --ECCC-postraw $ECCC_postraw \
+        --model-versions GEPS5 GEPS6sub1 GEPS6sub2 GEPS6 \
         --ECCC-varset  $ECCC_varset  \
         --ERA5-freq    $ERA5_freq    \
         --ERA5-varset  $ERA5_varset  \

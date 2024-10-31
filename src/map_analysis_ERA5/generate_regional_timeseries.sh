@@ -20,10 +20,15 @@ params=(
 )
 
 params=(
+    AR IVT
+    AR IVT_x
+    AR IVT_y
+    AR IWV
+    surf_inst mean_sea_level_pressure
     UVTZ geopotential
 )
 
-
+nproc=20
 
 
 #    surf_inst mean_sea_level_pressure
@@ -35,9 +40,9 @@ mask_file=test_mask.nc
 
 nparams=2
 
-input_root="output_map_analysis_ERA5_pentad-5-leadpentad-6"
-output_root="output_regional_timeseries"
-
+input_root="output_map_analysis_ERA5_pentad-10-leadpentad-3"
+output_root="output_regional_timeseries_pentad-10-leadpentad-3"
+source tool_trapkill.sh
 #for region_name in "N-PAC" "S-PAC" "T-PAC" "N-ATL" "T-ATL" "S-ATL" "T-IND" "S-IND" "ARC" "SO" ; do
 #for region_name in "NW-PAC" ; do
 for (( i=0 ; i < $(( ${#params[@]} / $nparams )) ; i++ )); do
@@ -54,7 +59,17 @@ for (( i=0 ; i < $(( ${#params[@]} / $nparams )) ; i++ )); do
         --varname $ECCC_varname          \
         --input-root $input_root         \
         --output-root $output_root       \
-        --mask-file $mask_file 
+        --mask-file $mask_file &
+
+    proc_cnt=$(( $proc_cnt + 1))
+    
+    if (( $proc_cnt >= $nproc )) ; then
+        echo "Max proc reached: $nproc"
+        wait
+        proc_cnt=0
+    fi 
 
 done
+
+wait
 #done

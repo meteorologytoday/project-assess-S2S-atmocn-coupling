@@ -19,6 +19,7 @@ parser.add_argument('--level', type=int, help='Selected level if data is 3D.', d
 parser.add_argument('--pval-threshold', type=float, help='Month to be processed.', default=0.05)
 parser.add_argument('--lead-pentad', type=int, help='Pentad to be processed.', required=True)
 parser.add_argument('--output', type=str, help='Output directory.', default="")
+parser.add_argument('--output-error', type=str, help='Output directory.', default="")
 parser.add_argument('--plot-lat-rng', type=float, nargs=2, help='Plot range of latitude', default=[-90, 90])
 parser.add_argument('--plot-lon-rng', type=float, nargs=2, help='Plot range of latitude', default=[0, 360])
 
@@ -30,6 +31,7 @@ print(args)
 
 data = []
 
+var3D = False
 
 
 for model_version in args.model_versions:
@@ -59,9 +61,13 @@ for model_version in args.model_versions:
         Emean    = "%s_Emean" % args.varname,
         E2mean   = "%s_E2mean" % args.varname,
     )
+    
+    print(ds[ds_varnames["Emean"]].dims)
 
     if "level" in ds[ds_varnames["Emean"]].dims:
 
+        print("This is 3D variable!!!!")
+        var3D = True
         if args.level is None:
             
             raise Exception("Data is 3D but `--level` is not given.")
@@ -144,16 +150,16 @@ plot_infos = dict(
     ),
 
     IVT = dict(
-        shading_levels = np.linspace(-1, 1, 21) * 50,
-        contour_levels = np.linspace(0, 1, 11) * 40,
+        shading_levels = np.linspace(-1, 1, 21) * 30,
+        contour_levels = np.linspace(0, 1, 11) * 30,
         factor = 1.0,
         label = "IVT",
         unit  = "$\\mathrm{kg} / \\mathrm{m} / \\mathrm{s}$",
     ),
 
     IVT_x = dict(
-        shading_levels = np.linspace(-1, 1, 21) * 50,
-        contour_levels = np.linspace(0, 1, 11) * 40,
+        shading_levels = np.linspace(-1, 1, 21) * 30,
+        contour_levels = np.linspace(0, 1, 11) * 30,
         factor = 1.0,
         label = "$\\mathrm{IVT}_x$",
         unit  = "$\\mathrm{kg} / \\mathrm{m} / \\mathrm{s}$",
@@ -162,8 +168,8 @@ plot_infos = dict(
 
 
     IVT_y = dict(
-        shading_levels = np.linspace(-1, 1, 21) * 50,
-        contour_levels = np.linspace(0, 1, 11) * 40,
+        shading_levels = np.linspace(-1, 1, 21) * 30,
+        contour_levels = np.linspace(0, 1, 11) * 30,
         factor = 1.0,
         label = "$\\mathrm{IVT}_y$",
         unit  = "$\\mathrm{kg} / \\mathrm{m} / \\mathrm{s}$",
@@ -191,8 +197,8 @@ plot_infos = dict(
 
 
     msl = dict(
-        shading_levels = np.linspace(-1, 1, 21) * 5,
-        contour_levels = np.linspace(0, 1, 11) * 20,
+        shading_levels = np.linspace(-1, 1, 21) * 2,
+        contour_levels = np.linspace(0, 1, 11) * 5,
         factor = 1e2,
         label = "$ P_\\mathrm{sfc} $",
         unit  = "hPa",
@@ -224,10 +230,10 @@ plot_infos = dict(
     ),
 
     gh = dict(
-        shading_levels = np.linspace(-1, 1, 21) * 50,
-        contour_levels = np.linspace(0, 1, 5) * 50,
+        shading_levels = np.linspace(-1, 1, 21) * 20,
+        contour_levels = np.linspace(0, 1, 5) * 20,
         factor = 1,
-        label = "$Z_{500}$",
+        label = "$Z_{%d}$",
         unit  = "$ \\mathrm{m} $",
     ),
 
@@ -325,7 +331,7 @@ mappable = _ax.contourf(
 )
 
 # Plot the standard deviation
-_contour = ( (data[0]["total_Estd"]**2 + data[1]["total_Estd"]**2)**0.5 / plot_info["factor"]
+_contour = (data[0]["total_Estd"]**2 + data[1]["total_Estd"]**2)**0.5 / plot_info["factor"]
 #_contour = (data[0]["total_Estd"] + data[1]["total_Estd"]) / 2 / plot_info["factor"]
 cs = _ax.contour(coords["longitude"], coords["latitude"], _contour, levels=plot_info["contour_levels"], colors="k", linestyles='-',linewidths=1, transform=proj_norm, alpha=0.8, zorder=10)
 _ax.clabel(cs, fmt="%.1f")
@@ -378,7 +384,12 @@ cax = tool_fig_config.addAxesNextToAxes(fig, _ax, "right", thickness=0.03, spaci
 cb = plt.colorbar(mappable, cax=cax, orientation="vertical", pad=0.00)
 
 unit_str = "" if plot_info["unit"] == "" else " [ %s ]" % (plot_info["unit"],)
-cb.ax.set_ylabel("%s\n%s" % (plot_info["label"], unit_str), size=25)
+
+label = plot_info["label"]
+if var3D:
+    label = label % (args.level,)
+
+cb.ax.set_ylabel("%s\n%s" % (label, unit_str), size=25)
 
 
 if not args.no_display:
@@ -390,4 +401,123 @@ if args.output != "":
     fig.savefig(args.output, dpi=200)
 
 print("Finished.")
+
+if args.output_error != "":
+
+
+    print("Plotting error differnce")
+
+    cent_lon = 90.0
+
+    plot_lon_l = args.plot_lon_rng[0]
+    plot_lon_r = args.plot_lon_rng[1]
+    plot_lat_b = args.plot_lat_rng[0]
+    plot_lat_t = args.plot_lat_rng[1]
+
+    proj = ccrs.PlateCarree(central_longitude=cent_lon)
+    proj_norm = ccrs.PlateCarree()
+
+    ncol = 1
+    nrow = 1
+
+
+    figsize, gridspec_kw = tool_fig_config.calFigParams(
+        w = 10,
+        h = 5,
+        wspace = 1.0,
+        hspace = 0.5,
+        w_left = 1.0,
+        w_right = 2.2,
+        h_bottom = 1.0,
+        h_top = 1.0,
+        ncol = ncol,
+        nrow = nrow,
+    )
+
+
+    fig, ax = plt.subplots(
+        nrow, ncol,
+        figsize=figsize,
+        subplot_kw=dict(projection=proj, aspect="auto"),
+        gridspec_kw=gridspec_kw,
+        constrained_layout=False,
+        squeeze=False,
+    )
+
+    cmap = cmocean.cm.balance
+
+
+    _ax = ax[0, 0]
+
+    plot_info = plot_infos[args.varname]
+
+    fig.suptitle("[%s minus %s] abs %04d-%04d month=%s, lead_pentad=%d" % (
+        args.model_versions[1],
+        args.model_versions[0],
+        args.year_rng[0],
+        args.year_rng[1],
+        ", ".join([ "%02d" % m for m in args.months]),
+        args.lead_pentad,
+    ), size=20)
+
+    coords = diff_ds.coords
+
+    diff_da = (data[1]["total_Emean"]**2)**0.5 - (data[0]["total_Emean"]**2)**0.5
+
+    _shading = diff_da.to_numpy() / plot_info["factor"]
+    mappable = _ax.contourf(
+        coords["longitude"], coords["latitude"],
+        _shading,
+        levels=plot_info["shading_levels"],
+        cmap=cmap, 
+        extend="both", 
+        transform=proj_norm,
+    )
+
+    for __ax in [_ax, ]: 
+
+        gl = __ax.gridlines(crs=ccrs.PlateCarree(), draw_labels=True,
+                          linewidth=1, color='gray', alpha=0.5, linestyle='--')
+
+        gl.xlabels_top   = False
+        gl.ylabels_right = False
+
+        #gl.xlocator = mticker.FixedLocator(np.arange(-180, 181, 30))
+        #gl.xlocator = mticker.FixedLocator([120, 150, 180, -150, -120])#np.arange(-180, 181, 30))
+        #gl.ylocator = mticker.FixedLocator([10, 20, 30, 40, 50])
+        
+        gl.xformatter = LONGITUDE_FORMATTER
+        gl.yformatter = LATITUDE_FORMATTER
+        gl.xlabel_style = {'size': 12, 'color': 'black'}
+        gl.ylabel_style = {'size': 12, 'color': 'black'}
+
+        __ax.set_global()
+        #__ax.gridlines()
+        __ax.coastlines(color='gray')
+        __ax.set_extent([plot_lon_l, plot_lon_r, plot_lat_b, plot_lat_t], crs=proj_norm)
+
+
+
+    cax = tool_fig_config.addAxesNextToAxes(fig, _ax, "right", thickness=0.03, spacing=0.05)
+    cb = plt.colorbar(mappable, cax=cax, orientation="vertical", pad=0.00)
+
+    unit_str = "" if plot_info["unit"] == "" else " [ %s ]" % (plot_info["unit"],)
+
+
+    label = plot_info["label"]
+    if var3D:
+        label = label % (args.level,)
+
+    cb.ax.set_ylabel("%s\n%s" % (label, unit_str), size=25)
+
+
+    if args.output_error != "":
+
+        print("Saving output: ", args.output_error) 
+        fig.savefig(args.output_error, dpi=200)
+
+    print("Finished.")
+
+
+
 

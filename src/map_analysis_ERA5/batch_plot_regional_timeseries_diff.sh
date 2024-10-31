@@ -8,9 +8,9 @@ params=(
 )
 
 params=(
-    AR IWV         0
-    surf_inst msl  0
     AR IVT         0
+    surf_inst msl  0
+    AR IWV         0
     UVTZ gh        850
 )
 
@@ -18,15 +18,21 @@ params=(
 beg_year=1998
 end_year=2017
 
-nparams=3
 
-input_root="output_regional_timeseries/${beg_year}-${end_year}"
-output_root="fig_regional_timeseries_diff_${beg_year}-${end_year}"
+
+pentad=10
+leadpentad=3
+
+input_root="output_regional_timeseries_pentad-${pentad}-leadpentad-${leadpentad}/${beg_year}-${end_year}"
+output_root="fig_regional_timeseries_pentad-${pentad}-leadpentad-${leadpentad}_${beg_year}-${end_year}"
+
 
 mkdir -p $output_root
 
+nparams=3
 #for region_name in "N-PAC" "S-PAC" "T-PAC" "N-ATL" "T-ATL" "S-ATL" "T-IND" "S-IND" "ARC" "SO" ; do
-for region_name in "T-PAC" "T-ATL" "NW-PAC" "NE-PAC" "N-ATL"; do
+#for region_name in "T-PAC" "T-ATL" "NW-PAC" "NE-PAC" "N-ATL"; do
+for region_name in "N-ATL" "NT-PAC" "NT-IND" "NDT-PAC" "NST-PAC" "NW-PAC" "NE-PAC" "NT-ATL"; do
 for (( i=0 ; i < $(( ${#params[@]} / $nparams )) ; i++ )); do
 
     ECCC_varset="${params[$(( i * $nparams + 0 ))]}"
@@ -42,21 +48,25 @@ for (( i=0 ; i < $(( ${#params[@]} / $nparams )) ; i++ )); do
 
     output_file=$output_root/diff_regional_timeseries_region-${region_name}_${ECCC_varset}-${ECCC_varname}${level_str}.png
     
+    if [ -f "$output_file" ] ; then
 
+        echo "File exists: $output_file"
 
-    python3 plot_regional_timeseries_diff.py \
-        --input-dir $input_root         \
-        --models GEPS5 GEPS6            \
-        --region $region_name           \
-        --ECCC-varset $ECCC_varset       \
-        --ECCC-varname $ECCC_varname     \
-        --lead-pentads 0 2 5             \
-        --output $output_file            \
-        --level $level                   \
-        --percent                        \
-        --add-datastat \
-        --no-display
+    else
+        python3 plot_regional_timeseries_diff.py \
+            --input-dir $input_root         \
+            --models GEPS5 GEPS6sub1        \
+            --region $region_name           \
+            --ECCC-varset $ECCC_varset       \
+            --ECCC-varname $ECCC_varname     \
+            --lead-pentads 0 1 2             \
+            --output $output_file            \
+            --level $level                   \
+            --percent                        \
+            --add-datastat \
+            --no-display
 
+    fi
 
 done
 done

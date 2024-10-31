@@ -34,6 +34,9 @@ regions = [
     "T-IND", "S-IND",
     "N-ATL", "T-ATL", "S-ATL",
     "ARC", "SO",
+    "DT-PAC", "NST-PAC", "DT-IND",
+    "NT-PAC", "NT-IND", "NT-ATL",
+    "NDT-PAC",
 ]
 
 
@@ -58,17 +61,15 @@ mask = mask.expand_dims(
     axis=0,
 ).rename("mask").copy()
 
-masks = np.zeros(
-    (len(regions), len(mask.coords["latitude"]), len(mask.coords["longitude"]),),
-    dtype=int,
-)
-
 for i, region in enumerate(regions):
    
     print("Making region: ", region) 
     _mask = mask.sel(region=region).copy()
     
-    if region == "ARC":
+    if region == "ALL":
+        pass
+
+    elif region == "ARC":
         
         _mask = _mask.where(
             (_mask.latitude > 60) 
@@ -97,8 +98,17 @@ for i, region in enumerate(regions):
         _mask = _mask.where(
             (_mask.latitude > 30) &
             (_mask.latitude <= 60) &
-            (_mask.longitude > 120) &
+            (_mask.longitude > 100) &
             (_mask.longitude <= 180) 
+        )
+ 
+    elif region == "NT-PAC":
+        
+        _mask = _mask.where(
+            (_mask.latitude <= 30) &
+            (_mask.latitude >   0) &
+            (_mask.longitude > 100) &
+            (_mask.longitude <= 260) 
         )
     
     elif region == "T-PAC":
@@ -106,7 +116,34 @@ for i, region in enumerate(regions):
         _mask = _mask.where(
             (_mask.latitude <= 30) &
             (_mask.latitude > -30) &
-            (_mask.longitude > 120) &
+            (_mask.longitude > 100) &
+            (_mask.longitude <= 260) 
+        )
+ 
+    elif region == "NST-PAC":
+        
+        _mask = _mask.where(
+            (_mask.latitude <= 30) &
+            (_mask.latitude >  15) &
+            (_mask.longitude > 100) &
+            (_mask.longitude <= 260) 
+        )
+ 
+    elif region == "DT-PAC":
+        
+        _mask = _mask.where(
+            (_mask.latitude <= 15) &
+            (_mask.latitude > -15) &
+            (_mask.longitude > 100) &
+            (_mask.longitude <= 260) 
+        )
+ 
+    elif region == "NDT-PAC":
+        
+        _mask = _mask.where(
+            (_mask.latitude <= 15) &
+            (_mask.latitude >   0) &
+            (_mask.longitude > 100) &
             (_mask.longitude <= 260) 
         )
  
@@ -124,8 +161,45 @@ for i, region in enumerate(regions):
         _mask = _mask.where(
             (_mask.latitude <= 30) &
             (_mask.latitude > -30)  &
-            (_mask.longitude > 25) &
-            (_mask.longitude <= 120) 
+            (_mask.longitude > 50) &
+            (_mask.longitude <= 100) 
+        )
+ 
+    elif region == "NT-IND":
+        
+        _mask = _mask.where(
+            (_mask.latitude <= 30) &
+            (_mask.latitude >   0)  &
+            (_mask.longitude > 50) &
+            (_mask.longitude <= 100) 
+        )
+ 
+    elif region == "DT-IND":
+        
+        _mask = _mask.where(
+            (_mask.latitude <= 15) &
+            (_mask.latitude > -15)  &
+            (_mask.longitude > 50) &
+            (_mask.longitude <= 100) 
+        )
+ 
+    elif region == "NST-IND":
+        
+        _mask = _mask.where(
+            (_mask.latitude <= 30) &
+            (_mask.latitude >  15)  &
+            (_mask.longitude > 50) &
+            (_mask.longitude <= 100) 
+
+        )
+ 
+    elif region == "N-IND":
+        
+        _mask = _mask.where(
+            (_mask.latitude <= 30) &
+            (_mask.latitude >   0) &
+            (_mask.longitude > 50) &
+            (_mask.longitude <= 100) 
         )
  
     elif region == "S-IND":
@@ -167,6 +241,19 @@ for i, region in enumerate(regions):
             ) 
         )
  
+    elif region == "NT-ATL":
+        
+        _mask = _mask.where(
+            (
+                (_mask.latitude <=  30) &
+                (_mask.latitude >    0)  &
+                ( 
+                    (_mask.longitude > 292) | 
+                    (_mask.longitude <= 20)
+                ) 
+            ) 
+        )
+ 
     elif region == "S-ATL":
         
         _mask = _mask.where(
@@ -186,12 +273,13 @@ for i, region in enumerate(regions):
         _mask = _mask.where(
             (_mask.latitude <= -60)
         )
- 
+
+    else:
+        raise Exception("Cannot find appropriate condition for %s" % (region,)) 
  
     _mask = xr.apply_ufunc(np.isfinite, _mask)
     mask[i, :, :] = _mask.to_numpy().astype(int) * base_mask
 
-#mask[:, :, :] = masks
 
 new_ds = xr.merge([mask, ])
 new_ds.to_netcdf(args.output)

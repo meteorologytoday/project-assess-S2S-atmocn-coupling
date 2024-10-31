@@ -289,8 +289,7 @@ for _ax in ax.flatten():
     _ax.grid()
 
     if args.percentage:
-        _ax.set_ylim([-10, 10])
-
+        _ax.set_ylim([-10, 15])
 
 if not args.no_display:
     plt.show()

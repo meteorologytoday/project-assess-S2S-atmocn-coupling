@@ -1,5 +1,7 @@
 #!/bin/bash
 
+output_regional_timeseries_pentad-10-leadpentad-3
+
 params=(
     AR IVT         NONE
     AR IVT_y       NONE
@@ -17,16 +19,18 @@ beg_year=1998
 end_year=2017
 
 
+pentad=10
+leadpentad=3
 
-input_root="output_regional_timeseries/${beg_year}-${end_year}"
-output_root="fig_regional_timeseries_${beg_year}-${end_year}"
+input_root="output_regional_timeseries_pentad-${pentad}-leadpentad-${leadpentad}/${beg_year}-${end_year}"
+output_root="fig_regional_timeseries_pentad-${pentad}-leadpentad-${leadpentad}_${beg_year}-${end_year}"
 
 mkdir -p $output_root
 
 nparams=3
-for lead_pentad in 5 2 ; do
+for lead_pentad in 2 ; do
 #for region_name in "N-PAC" "S-PAC" "T-PAC" "N-ATL" "T-ATL" "S-ATL" "T-IND" "S-IND" "ARC" "SO" ; do
-for region_name in "NW-PAC" "NE-PAC" "N-ATL"; do
+for region_name in "NT-IND" "DT-PAC" "NST-PAC" "NW-PAC" "NE-PAC" "N-ATL"; do
 for (( i=0 ; i < $(( ${#params[@]} / $nparams )) ; i++ )); do
 
     ECCC_varset="${params[$(( i * $nparams + 0 ))]}"
@@ -38,7 +42,6 @@ for (( i=0 ; i < $(( ${#params[@]} / $nparams )) ; i++ )); do
     else
         level_str=""
     fi
-
 
     output_file=$output_root/regional_timeseries_region-${region_name}_leadpentad-${lead_pentad}_${ECCC_varset}-${ECCC_varname}${level_str}.png
     

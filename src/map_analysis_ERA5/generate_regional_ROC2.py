@@ -20,8 +20,6 @@ import ERA5_loader
 
 print("Done.")
 
-model_versions = ["GEPS5", "GEPS6"]
-
 parser = argparse.ArgumentParser(
                     prog = 'make_ECCC_AR_objects.py',
                     description = 'Postprocess ECCO data (Mixed-Layer integrated).',
@@ -29,6 +27,7 @@ parser = argparse.ArgumentParser(
 
 #parser.add_argument('--start-months', type=int, nargs="+", required=True)
 parser.add_argument('--year-rng', type=int, nargs=2, required=True)
+parser.add_argument('--model-versions', type=str, nargs="+", required=True)
 parser.add_argument('--output-root', type=str, required=True)
 parser.add_argument('--ECCC-postraw', type=str, required=True)
 parser.add_argument('--ECCC-varset', type=str, required=True)
@@ -203,10 +202,8 @@ def doJob(job_detail, detect_phase = False):
         
             ds_ECCC = ECCC_tools.open_dataset(ECCC_postraw, ECCC_varset, model_version, start_time).isel(start_time=0)
             
-            for lt, lead_time in enumerate(aux_ds.coords["lead_time"].to_numpy()):
+            for lt, lead_time in enumerate(ds_ECCC.coords["lead_time"].to_numpy()):
             
-                #print("lead_time: ", lead_time)
-                
                 _ds_ECCC = ds_ECCC[ECCC_varname].isel(lead_time=lt)
                 
                 if do_level_sel:
@@ -237,32 +234,28 @@ def doJob(job_detail, detect_phase = False):
                     ),
                 )
                 
-                #ref_data = ref_data.to_numpy()
-
-
-                        
                 for j, region in enumerate(regions):
             
                     region_flag = region_flags[region]
                     avg_ECCC_da = _ds_ECCC.where(region_flag).mean(dim=["latitude", "longitude"], skipna=True, )
                     avg_ref_da  = ref_data.where(region_flag).mean(dim=["latitude", "longitude"], skipna=True, )
 
-                    print("avg_ECCC_da: " , avg_ECCC_da) 
-                    print("avg_ref_da: " , avg_ref_da) 
+                    #print("avg_ECCC_da: " , avg_ECCC_da) 
+                    #print("avg_ref_da: " , avg_ref_da) 
                     var_ECCC_mean[st, lt, :, j] = avg_ECCC_da.to_numpy() 
                     var_ref_mean[st, lt, j] = avg_ref_da.to_numpy() 
 
         # prepping for output
         coords=dict(
-            start_time=aux_ds.coords["start_time"],
+            start_time=start_times,
             lead_time=aux_ds.coords["lead_time"],
             number=aux_ds.coords["number"],
             region=regions,
         )
 
             
-        dim_list_ECCC  = ["start_time", "lead_time", "number",] 
-        dim_list_ref   = ["start_time", "lead_time",] 
+        dim_list_ECCC  = ["start_time", "lead_time", "number", "region"] 
+        dim_list_ref   = ["start_time", "lead_time", "region"] 
         if variable3D:
             dim_list_ECCC   += ["level",]
             dim_list_ref    += ["level,"]
@@ -274,8 +267,8 @@ def doJob(job_detail, detect_phase = False):
 
         _tmp = dict()
 
-        _tmp["ECCC_%s" % (ECCC_varname, )]  = (dim_list, var_ECCC_mean)
-        _tmp["ERA5_%s" % (ECCC_varname, )]  = (dim_list, var_ref_mean)
+        _tmp["ECCC_%s" % (ECCC_varname, )]  = (dim_list_ECCC, var_ECCC_mean)
+        _tmp["ERA5_%s" % (ECCC_varname, )]  = (dim_list_ref,  var_ref_mean)
 
         output_ds = xr.Dataset(
             data_vars=_tmp,
@@ -314,7 +307,7 @@ start_yms = pd.date_range(
     inclusive="both",
 )
 
-for model_version in model_versions:
+for model_version in args.model_versions:
     
     print("[MODEL VERSION]: ", model_version)
     

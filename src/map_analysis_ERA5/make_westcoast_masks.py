@@ -30,10 +30,16 @@ test_dt = pd.Timestamp(args.test_date)
 dlon = 5
 dlat = 5
 
-scan_lon_rng = [360-160, 360-115]
-scan_lat_rng = [30, 65]
+#scan_lon_rng = [360-160, 360-115]
+#scan_lat_rng = [30, 65]
+#nregions = int( (scan_lon_rng[1] - scan_lon_rng[0]) / dlon )
 
-nregions = int( (scan_lon_rng[1] - scan_lon_rng[0]) / dlon )
+scan_lon_rng = [360-130, 360-125]
+scan_lat_rng = [30, 50]
+nregions = int( (scan_lat_rng[1] - scan_lat_rng[0]) / dlon )
+
+
+
 regions = ["%04d" % (i+1,) for i in range(nregions)]
 
 
@@ -60,6 +66,7 @@ mask = xr.zeros_like(full_mask).expand_dims(
 
 regions = []
 
+"""
 for lon_beg in np.arange(scan_lon_rng[0], scan_lon_rng[1], dlon):
     for lat_beg in np.arange(scan_lat_rng[0], scan_lat_rng[1], dlat):
         
@@ -89,7 +96,30 @@ for lon_beg in np.arange(scan_lon_rng[0], scan_lon_rng[1], dlon):
             _mask = xr.apply_ufunc(np.isfinite, _mask)
             mask[i, :, :] = _mask.to_numpy().astype(int)
             break
+"""
+ 
+for lon_beg in np.arange(scan_lon_rng[0], scan_lon_rng[1], dlon):
+    for lat_beg in np.arange(scan_lat_rng[0], scan_lat_rng[1], dlat):
         
+        lon_end = lon_beg + dlon
+        lat_end = lat_beg + dlat
+        
+        # test if hit land.
+        test_idx = (
+            (lnd_mask.coords["latitude"]  >   lat_beg) &
+            (lnd_mask.coords["latitude"]  <=  lat_end) &
+            (lnd_mask.coords["longitude"] >   lon_beg) &
+            (lnd_mask.coords["longitude"] <=  lon_end) 
+
+        )
+        
+        i = len(regions)
+        regions.append("%04d" % (i+1,))
+    
+        _mask = full_mask.copy().where(test_idx)
+        _mask = xr.apply_ufunc(np.isfinite, _mask)
+        mask[i, :, :] = _mask.to_numpy().astype(int)
+   
 new_ds = xr.merge([mask, ])
 new_ds.to_netcdf(args.output)
 

@@ -12,13 +12,15 @@ import os
 import pretty_latlon
 pretty_latlon.default_fmt = "%d"
 
-import ECCC_tools
+import ECMWF_tools
 import ERA5_loader
 
-model_versions = ["GEPS6sub1", "GEPS6sub2", "GEPS5", "GEPS6"]
+
+
+model_versions = ["CY48R1",]
 
 parser = argparse.ArgumentParser(
-                    prog = 'make_ECCC_AR_objects.py',
+                    prog = 'make_ECMWF_AR_objects.py',
                     description = 'Postprocess ECCO data (Mixed-Layer integrated).',
 )
 
@@ -27,8 +29,8 @@ parser.add_argument('--lead-pentads', type=int, default=6)
 parser.add_argument('--days-per-pentad', type=int, default=5)
 parser.add_argument('--year-rng', type=int, nargs=2, required=True)
 parser.add_argument('--output-root', type=str, required=True)
-parser.add_argument('--ECCC-postraw', type=str, required=True)
-parser.add_argument('--ECCC-varset', type=str, required=True)
+parser.add_argument('--ECMWF-postraw', type=str, required=True)
+parser.add_argument('--ECMWF-varset', type=str, required=True)
 parser.add_argument('--ERA5-varset', type=str, required=True)
 parser.add_argument('--ERA5-freq', type=str, required=True)
 parser.add_argument('--levels', nargs="+", type=int, help="If variable is 3D.", default=None)
@@ -42,7 +44,7 @@ output_root = args.output_root
 # inclusive
 year_rng = args.year_rng
 days_per_pentad = args.days_per_pentad
-ECCC_tools.archive_root = os.path.join("S2S", "ECCC", "data20_20240723")
+ECMWF_tools.archive_root = os.path.join("S2S", "ECMWF", "data")
 
 
 ERA5_freq = args.ERA5_freq
@@ -51,10 +53,10 @@ ERA5_varname_long  = args.varname
 ERA5_varname_short = ERA5_loader.ERA5_longshortname_mapping[ERA5_varname_long]
 
 
-ECCC_postraw = args.ECCC_postraw
-ECCC_varset = args.ECCC_varset
-ECCC_varname_long  = args.varname
-ECCC_varname_short = ECCC_tools.ECCC_longshortname_mapping[ECCC_varname_long]
+ECMWF_postraw = args.ECMWF_postraw
+ECMWF_varset = args.ECMWF_varset
+ECMWF_varname_long  = args.varname
+ECMWF_varname_short = ECMWF_tools.ECMWF_longshortname_mapping[ECMWF_varname_long]
 
 
 
@@ -73,9 +75,9 @@ def doJob(job_detail, detect_phase = False):
         start_ym = job_detail['start_ym']
         model_version = job_detail['model_version']
 
-        ECCC_varname  = job_detail['ECCC_varname']
-        ECCC_varset   = job_detail['ECCC_varset']
-        ECCC_postraw  = job_detail['ECCC_postraw']
+        ECMWF_varname  = job_detail['ECMWF_varname']
+        ECMWF_varset   = job_detail['ECMWF_varset']
+        ECMWF_postraw  = job_detail['ECMWF_postraw']
 
         ERA5_varname  = job_detail['ERA5_varname']
         ERA5_varset   = job_detail['ERA5_varset']
@@ -90,10 +92,10 @@ def doJob(job_detail, detect_phase = False):
             job_detail['model_version'], 
         )
 
-        output_file = "ECCC-S2S_{model_version:s}_{varset:s}::{varname:s}_{start_ym:s}.nc".format(
+        output_file = "ECMWF-S2S_{model_version:s}_{varset:s}::{varname:s}_{start_ym:s}.nc".format(
             model_version = job_detail['model_version'],
-            varset        = ECCC_varset,
-            varname       = ECCC_varname,
+            varset        = ECMWF_varset,
+            varname       = ECMWF_varname,
             start_ym    = start_ym.strftime("%Y-%m"),
         )
         
@@ -128,11 +130,16 @@ def doJob(job_detail, detect_phase = False):
         start_times = [] 
         for dt in test_dts:
             
-            model_version_date = ECCC_tools.modelVersionReforecastDateToModelVersionDate(model_version, dt)
+            model_version_date = ECMWF_tools.modelVersionReforecastDateToModelVersionDate(model_version, dt)
             
             if model_version_date is None:
                 continue
-        
+            
+            if dt.month == 2 and dt.day==29:
+                print("Skip 2/29")
+                continue        
+
+
             start_times.append(dt)
     
             print("The date %s exists on ECMWF database. " % (dt.strftime("%m/%d")))
@@ -142,9 +149,9 @@ def doJob(job_detail, detect_phase = False):
             raise Exception("No valid start_times found.")
         
         
-        aux_ds = ECCC_tools.open_dataset(ECCC_postraw, ECCC_varset, model_version, start_times[0])
+        aux_ds = ECMWF_tools.open_dataset(ECMWF_postraw, ECMWF_varset, model_version, start_times[0])
 
-        variable3D = "level" in aux_ds[ECCC_varname].dims
+        variable3D = "level" in aux_ds[ECMWF_varname].dims
         do_level_sel = variable3D and args.levels is not None
             
 
@@ -166,11 +173,11 @@ def doJob(job_detail, detect_phase = False):
         E2mean    = np.zeros(dim_E)
 
         # This variable is used to adjust the time specifiction
-        # between ECCC and ERA5.
+        # between ECMWF and ERA5.
         # For example, sst is a daily average, the first lead time is 12 hours (12Z) whereas I 
         # stored the average time as 00Z.
 
-        if ERA5_freq == "daily_mean": 
+        if ERA5_freq == "24hr": 
             ERA5_time_adjustment = - pd.Timedelta(hours=12)
         else:
             ERA5_time_adjustment = - pd.Timedelta(days=1)
@@ -179,16 +186,16 @@ def doJob(job_detail, detect_phase = False):
 
             print("start_time: ", start_time)
         
-            ds_ECCC = ECCC_tools.open_dataset(ECCC_postraw, ECCC_varset, model_version, start_time).isel(start_time=0)
+            ds_ECMWF = ECMWF_tools.open_dataset(ECMWF_postraw, ECMWF_varset, model_version, start_time).isel(start_time=0)
             
             for p in range(args.lead_pentads):
                 
-                _ds_ECCC = ds_ECCC[ECCC_varname].isel(lead_time=slice(days_per_pentad*p, days_per_pentad*(p+1)))
+                _ds_ECMWF = ds_ECMWF[ECMWF_varname].isel(lead_time=slice(days_per_pentad*p, days_per_pentad*(p+1)))
 
                 if do_level_sel:
-                    _ds_ECCC = _ds_ECCC.sel(level=args.levels)
+                    _ds_ECMWF = _ds_ECMWF.sel(level=args.levels)
 
-                for lead_time in _ds_ECCC.coords["lead_time"].to_numpy():
+                for lead_time in _ds_ECMWF.coords["lead_time"].to_numpy():
                    
                     start_time_plus_lead_time = start_time + lead_time
 
@@ -208,19 +215,19 @@ def doJob(job_detail, detect_phase = False):
 
                     # Interpolation
                     #print("ref_data: ", ref_data.coords["latitude"].to_numpy())
-                    #print("_ds_ECCC: ", _ds_ECCC.coords["latitude"].to_numpy())
+                    #print("_ds_ECMWF: ", _ds_ECMWF.coords["latitude"].to_numpy())
                     ref_data = ref_data.interp(
                         coords=dict(
-                            latitude  = _ds_ECCC.coords["latitude"],
-                            longitude = _ds_ECCC.coords["longitude"],
+                            latitude  = _ds_ECMWF.coords["latitude"],
+                            longitude = _ds_ECMWF.coords["longitude"],
                         ),
                     )
 
                     ref_data = ref_data.to_numpy()
 
-                    for number in _ds_ECCC.coords["number"]:
-                        #print(_ds_ECCC) 
-                        fcst_data = _ds_ECCC.sel(lead_time=lead_time, number=number).to_numpy()
+                    for number in _ds_ECMWF.coords["number"]:
+                        #print(_ds_ECMWF) 
+                        fcst_data = _ds_ECMWF.sel(lead_time=lead_time, number=number).to_numpy()
                         #print(fcst_data.shape)
                         Emean[0, p]     += fcst_data - ref_data
                         E2mean[0, p]    += (fcst_data - ref_data)**2
@@ -257,8 +264,8 @@ def doJob(job_detail, detect_phase = False):
             dim_E   = ["start_ym", "lead_pentad", "latitude", "longitude"]
 
         _tmp = dict()
-        _tmp["%s_Emean" % ECCC_varname]  = (dim_E, Emean)
-        _tmp["%s_E2mean" % ECCC_varname]  = (dim_E, E2mean)
+        _tmp["%s_Emean" % ECMWF_varname]  = (dim_E, Emean)
+        _tmp["%s_E2mean" % ECMWF_varname]  = (dim_E, E2mean)
         _tmp["total_cnt"] = (["start_ym", "lead_pentad"], total_cnt,)
  
         output_ds = xr.Dataset(
@@ -311,9 +318,9 @@ for model_version in model_versions:
         job_detail = dict(
             start_ym      = start_ym,
             model_version = model_version,
-            ECCC_postraw  = ECCC_postraw,
-            ECCC_varset   = ECCC_varset,
-            ECCC_varname  = ECCC_varname_short,
+            ECMWF_postraw  = ECMWF_postraw,
+            ECMWF_varset   = ECMWF_varset,
+            ECMWF_varname  = ECMWF_varname_short,
             ERA5_varset   = ERA5_varset,
             ERA5_varname  = ERA5_varname_short,
             ERA5_freq     = ERA5_freq,
