@@ -4,7 +4,7 @@ import os
 import numpy as np
 
 
-archive_root = os.path.join("S2S", "ERA5")
+archive_root = os.path.join("data", "ERA5")
 
 mapping_longname_shortname = {
     'geopotential'                  : 'z',

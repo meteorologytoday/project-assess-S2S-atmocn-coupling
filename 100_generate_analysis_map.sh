@@ -7,6 +7,11 @@ nproc=1
 days_per_pentad=5
 lead_pentads=6
 
+
+days_per_pentad=7
+lead_pentads=4
+
+
 #lead_pentads=10
 #days_per_pentad=3
 
@@ -40,7 +45,7 @@ params=(
 
 nparams=5
 
-output_root="$gendata_dir/output_analysis_map_pentad-${days_per_pentad}-leadpentad-${lead_pentads}"
+output_root="$gendata_dir/analysis/output_analysis_map_pentad-${days_per_pentad}-leadpentad-${lead_pentads}"
 for (( i=0 ; i < $(( ${#params[@]} / $nparams )) ; i++ )); do
 
     ECCC_postraw="${params[$(( i * $nparams + 0 ))]}"

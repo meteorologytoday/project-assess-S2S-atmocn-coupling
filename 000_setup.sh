@@ -4,6 +4,7 @@ sh=bash
 
 
 fig_dir=figures
+finalfig_dir=final_figures
 
 data_dir=./data
 gendata_dir=./gendata
