@@ -7,6 +7,7 @@ import numpy as np
 archive_root = os.path.join("data", "ERA5")
 
 mapping_longname_shortname = {
+    'sea_ice_concentration'                  : 'sicon',
     'geopotential'                  : 'z',
     '10m_u_component_of_wind'       : 'u10',
     '10m_v_component_of_wind'       : 'v10',

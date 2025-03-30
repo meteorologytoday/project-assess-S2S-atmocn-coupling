@@ -15,13 +15,11 @@ pretty_latlon.default_fmt = "%d"
 import ECCC_tools
 ECCC_tools.init()
 
-
-
-
 import ERA5_loader
 
-#model_versions = ["GEPS6sub1", "GEPS6sub2", "GEPS5", "GEPS6",]# "GEPS6sub2", "GEPS6"]
-model_versions = ["GEPS5", "GEPS6sub1", ]#sub2", "GEPS5", "GEPS6",]# "GEPS6sub2", "GEPS6"]
+
+
+model_versions = ["GEPS6sub1", "GEPS5",]# "GEPS6sub2", "GEPS6"]
 
 parser = argparse.ArgumentParser(
                     prog = 'make_ECCC_AR_objects.py',
@@ -29,9 +27,15 @@ parser = argparse.ArgumentParser(
 )
 
 #parser.add_argument('--start-months', type=int, nargs="+", required=True)
+parser.add_argument('--category-file', type=str, required=True)
+parser.add_argument('--date-to-category-file', type=str, required=True)
+parser.add_argument('--category-name', type=str, default="category")
+parser.add_argument('--ignored-categories', type=str, nargs="*", default=[])
+
 parser.add_argument('--lead-windows', type=int, default=6)
 parser.add_argument('--days-per-window', type=int, default=5)
-parser.add_argument('--year-rng', type=int, nargs=2, required=True)
+
+#parser.add_argument('--year-rng', type=int, nargs=2, required=True)
 parser.add_argument('--output-root', type=str, required=True)
 parser.add_argument('--ECCC-postraw', type=str, required=True)
 parser.add_argument('--ECCC-varset', type=str, required=True)
@@ -40,16 +44,14 @@ parser.add_argument('--ERA5-freq', type=str, required=True)
 parser.add_argument('--levels', nargs="+", type=int, help="If variable is 3D.", default=None)
 parser.add_argument('--varname', type=str, required=True)
 parser.add_argument('--nproc', type=int, default=1)
-
 args = parser.parse_args()
 print(args)
 
 output_root = args.output_root
 
 # inclusive
-year_rng = args.year_rng
 days_per_window = args.days_per_window
-#ECCC_tools.archive_root = os.path.join("S2S", "ECCC", "data20_20240723")
+ECCC_tools.archive_root = os.path.join("S2S", "ECCC", "data20_20240723")
 
 
 ERA5_freq = args.ERA5_freq
@@ -65,6 +67,26 @@ ECCC_varname_short = ECCC_tools.ECCC_longshortname_mapping[ECCC_varname_long]
 
 
 
+print("Category column named as `%s`" % (args.category_name,))
+print("Category file: ", args.category_file)
+print("Ignored catories: ", args.ignored_categories)
+
+categories = pd.read_csv(args.category_file)[args.category_name].to_numpy()
+_tmp = []
+for category in categories:
+    if category not in args.ignored_categories:
+        _tmp.append(category)
+
+categories = _tmp
+date_category_mapping = pd.read_csv(args.date_to_category_file)[['date', args.category_name]]
+
+print("I read %d categories: %s." % (
+    len(categories),
+    ", ".join([str(category) for category in categories])
+))
+
+
+
 
 def doJob(job_detail, detect_phase = False):
 
@@ -77,7 +99,9 @@ def doJob(job_detail, detect_phase = False):
     
     try: 
 
-        start_ym = job_detail['start_ym']
+        category = job_detail['category']
+        category_name = job_detail['category_name']
+
         model_version = job_detail['model_version']
 
         ECCC_varname  = job_detail['ECCC_varname']
@@ -88,20 +112,17 @@ def doJob(job_detail, detect_phase = False):
         ERA5_varset   = job_detail['ERA5_varset']
         ERA5_freq     = job_detail['ERA5_freq']
 
-        start_year  = start_ym.year
-        start_month = start_ym.month
- 
-      
         output_dir = os.path.join(
             output_root,
             job_detail['model_version'], 
         )
 
-        output_file = "ECCC-S2S_{model_version:s}_{varset:s}::{varname:s}_{start_ym:s}.nc".format(
+        output_file = "ECCC-S2S_{model_version:s}_{varset:s}::{varname:s}_{category_name:s}-{category:s}.nc".format(
             model_version = job_detail['model_version'],
             varset        = ECCC_varset,
             varname       = ECCC_varname,
-            start_ym    = start_ym.strftime("%Y-%m"),
+            category      = str(category),
+            category_name = category_name,
         )
         
         output_file_fullpath = os.path.join(
@@ -125,11 +146,9 @@ def doJob(job_detail, detect_phase = False):
             return result
 
 
-        # Load file
-        #lead_time_vec = [ pd.Timedelta(hours=h) for h in ( 1 + np.arange(number_of_lead_time) ) * 24 ]
-
-        start_ym = pd.Timestamp(year=start_ym.year, month=start_ym.month, day=1)
-        test_dts = pd.date_range(start_ym, start_ym + pd.DateOffset(months=1), freq="D", inclusive="left")
+        print("Finding dates cateogry: %s" % (str(category),)) 
+        # these selected dts are start_time
+        test_dts = pd.to_datetime(date_category_mapping.loc[date_category_mapping[category_name] == category, "date"])
        
         start_times = [] 
         for dt in test_dts:
@@ -138,7 +157,9 @@ def doJob(job_detail, detect_phase = False):
             
             if model_version_date is None:
                 continue
-        
+
+
+            print("Found valid time: ", dt.strftime("%Y-%m-%d"))
             start_times.append(dt)
     
             print("The date %s exists on ECMWF database. " % (dt.strftime("%m/%d")))
@@ -174,9 +195,10 @@ def doJob(job_detail, detect_phase = False):
         ddof      = np.zeros(dim_cnt)
         Emean     = np.zeros(dim_E)
         E2mean    = np.zeros(dim_E)
-        
+
         Eabsmean  = np.zeros(dim_E)
         Eabs2mean = np.zeros(dim_E)
+
 
         # This variable is used to adjust the time specifiction
         # between ECCC and ERA5.
@@ -189,7 +211,7 @@ def doJob(job_detail, detect_phase = False):
             # I think download daily ERA5 data by month puts the
             # average of day XXXX-01-01T00:00 ~ XXXX-01-02T00:00 in
             # the time XXXX-01-01T00:00
-            ERA5_time_adjustment = - pd.Timedelta(hours=12)  
+            ERA5_time_adjustment = - pd.Timedelta(hours=12) 
         elif ERA5_freq == "daily_acc": 
             # 2025/01/10
             # By matching the sensible and latent heat flux map,
@@ -197,6 +219,7 @@ def doJob(job_detail, detect_phase = False):
             # average of day XXXX-01-01T00:00 ~ XXXX-01-02T00:00 in
             # the time XXXX-01-01T00:00
             ERA5_time_adjustment = - pd.Timedelta(hours=12) 
+
         elif ERA5_freq == "inst":
             ERA5_time_adjustment = - pd.Timedelta(hours=24)
         else:
@@ -218,6 +241,7 @@ def doJob(job_detail, detect_phase = False):
                 for l, lead_time in enumerate(_ds_ECCC.coords["lead_time"].to_numpy()):
                    
                     #start_time_plus_lead_time = start_time + lead_time
+
                     #print("start_time_plus_lead_time = ", start_time_plus_lead_time) 
                     ref_data = ERA5_loader.open_dataset_ERA5(
                         start_time + lead_time + ERA5_time_adjustment,
@@ -230,11 +254,6 @@ def doJob(job_detail, detect_phase = False):
                         reverse_sign = -1
                         print("Var %s need to reverse sign. Now multiply it by %d. " % (ERA5_varname_long, reverse_sign,))
                         ref_data *= reverse_sign
-                    elif ERA5_varname_long == "total_precipitation":
-                        print("Var %s need to convert from meter to milli-meter. " % (ERA5_varname_long,))
-                        ref_data *= 1e3
-                       
-
 
                     if do_level_sel:
                         ref_data = ref_data.sel(level=args.levels)
@@ -242,7 +261,10 @@ def doJob(job_detail, detect_phase = False):
 
                     if args.varname == "geopotential":
                         ref_data /= 9.81 
-
+                    elif ERA5_varname_long == "total_precipitation":
+                        print("Var %s need to convert from meter to milli-meter. " % (ERA5_varname_long,))
+                        ref_data *= 1e3
+ 
                     # Interpolation
                     #print("ref_data: ", ref_data.coords["latitude"].to_numpy())
                     #print("_ds_ECCC: ", _ds_ECCC.coords["latitude"].to_numpy())
@@ -256,9 +278,8 @@ def doJob(job_detail, detect_phase = False):
                     ref_data = ref_data.to_numpy()
 
                     for number in _ds_ECCC.coords["number"]:
-                        #print(_ds_ECCC) 
                         fcst_data = _ds_ECCC.sel(lead_time=lead_time, number=number).to_numpy()
-                        #print(fcst_data.shape)
+
                         fcst_error = fcst_data - ref_data
                         Emean[0, p]     += fcst_error
                         E2mean[0, p]    += fcst_error**2
@@ -266,15 +287,9 @@ def doJob(job_detail, detect_phase = False):
                         Eabs2mean[0, p] += np.abs(fcst_error)**2
                         total_cnt[0, p] += 1
 
-                        #print("number=%d, nan=%d" % (number, np.sum(np.isnan(fcst_error))))
-
-
                         # I consider two days of the same prediction dependent. 
                         if l == 0:
                             ddof[0, p] += 1
-
-
-                    
 
 
         if variable3D:
@@ -292,13 +307,13 @@ def doJob(job_detail, detect_phase = False):
         # prepping for output
  
         coords=dict(
-            start_ym=[start_ym,],
+            category=[category,],
             latitude=aux_ds.coords["latitude"],
             longitude=aux_ds.coords["longitude"],
         )
 
         if variable3D:
-            dim_E   = ["start_ym", "lead_window", "level", "latitude", "longitude"] 
+            dim_E   = [args.category_name, "lead_window", "level", "latitude", "longitude"] 
             if args.levels is None:
                 coords["level"] = aux_ds.coords["level"]
             else:
@@ -306,7 +321,7 @@ def doJob(job_detail, detect_phase = False):
         
 
         else:
-            dim_E   = ["start_ym", "lead_window", "latitude", "longitude"]
+            dim_E   = [args.category_name, "lead_window", "latitude", "longitude"]
 
         _tmp = dict()
         _tmp["%s_Emean" % ECCC_varname]  = (dim_E, Emean)
@@ -314,8 +329,8 @@ def doJob(job_detail, detect_phase = False):
         _tmp["%s_Eabsmean" % ECCC_varname]  = (dim_E, Eabsmean)
         _tmp["%s_Eabs2mean" % ECCC_varname]  = (dim_E, Eabs2mean)
 
-        _tmp["total_cnt"] = (["start_ym", "lead_window"], total_cnt,)
-        _tmp["ddof"] = (["start_ym", "lead_window"], ddof,)
+        _tmp["total_cnt"] = ([args.category_name, "lead_window"], total_cnt,)
+        _tmp["ddof"] = ([args.category_name, "lead_window"], ddof,)
  
         output_ds = xr.Dataset(
             data_vars=_tmp,
@@ -347,25 +362,19 @@ failed_dates = []
 input_args = []
 
 
-start_yms = pd.date_range(
-    pd.Timestamp(year=year_rng[0], month=1,  day=1),
-    pd.Timestamp(year=year_rng[1]+1, month=1, day=1),
-    freq="M",
-    inclusive="both",
-)
-
 for model_version in model_versions:
     
     print("[MODEL VERSION]: ", model_version)
     
-    for start_ym in start_yms:
+    for category in categories:
 
         #if start_ym.month not in [4,]:
         #    print("For now skip doing this month: ", str(start_ym))
         #    continue
  
         job_detail = dict(
-            start_ym      = start_ym,
+            category      = category,
+            category_name = args.category_name,
             model_version = model_version,
             ECCC_postraw  = ECCC_postraw,
             ECCC_varset   = ECCC_varset,
@@ -375,7 +384,7 @@ for model_version in model_versions:
             ERA5_freq     = ERA5_freq,
         )
         
-        print("[Detect] Checking year-month = %s" % (start_ym.strftime("%Y-%m"),))
+        print("[Detect] Checking category = %s" % (str(category),))
         
         result = doJob(job_detail, detect_phase=True)
         
@@ -387,6 +396,7 @@ for model_version in model_versions:
             
            
 
+print("!!!!!!!!! There are %d jobs needs distribution. " % (len(input_args,)))
 
 with Pool(processes=args.nproc) as pool:
 

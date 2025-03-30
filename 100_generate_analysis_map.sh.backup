@@ -4,16 +4,18 @@ source 000_setup.sh
 
 nproc=1
 
-days_per_pentad=5
-lead_pentads=6
+days_per_window=5
+lead_windows=6
 
 
-days_per_pentad=7
-lead_pentads=4
 
 
-#lead_pentads=10
-#days_per_pentad=3
+#days_per_window=7
+#lead_windows=4
+
+
+#lead_windows=10
+#days_per_window=3
 
 # Params:
 
@@ -33,6 +35,7 @@ params=(
 
 params=(
     raw surf_inst inst mean_sea_level_pressure mean_sea_level_pressure
+    raw UVTZ inst geopotential geopotential
     postprocessed AR inst AR IVT
     postprocessed surf_hf_avg daily_mean mean_surface_sensible_heat_flux mean_surface_sensible_heat_flux
     postprocessed surf_hf_avg daily_mean mean_surface_latent_heat_flux mean_surface_latent_heat_flux
@@ -40,12 +43,21 @@ params=(
     postprocessed AR inst AR IVT_x
     postprocessed AR inst AR IVT_y
     postprocessed AR inst AR IWV
-    raw UVTZ inst geopotential geopotential
 )
+
+params=(
+#    postprocessed surf_hf_avg daily_mean mean_surface_sensible_heat_flux mean_surface_sensible_heat_flux
+#    postprocessed surf_hf_avg daily_mean mean_surface_latent_heat_flux mean_surface_latent_heat_flux
+
+#    raw surf_avg  daily_mean sea_ice_cover sea_ice_cover
+    postprocessed precip daily_acc total_precipitation total_precipitation
+
+)
+
 
 nparams=5
 
-output_root="$gendata_dir/analysis/output_analysis_map_pentad-${days_per_pentad}-leadpentad-${lead_pentads}"
+output_root="$gendata_dir/analysis/output_analysis_map_window-${days_per_window}-leadwindow-${lead_windows}"
 for (( i=0 ; i < $(( ${#params[@]} / $nparams )) ; i++ )); do
 
     ECCC_postraw="${params[$(( i * $nparams + 0 ))]}"
@@ -72,8 +84,8 @@ for (( i=0 ; i < $(( ${#params[@]} / $nparams )) ; i++ )); do
         --varname $varname           \
         --levels $levels             \
         --output-root $output_root   \
-        --lead-pentads $lead_pentads \
-        --days-per-pentad $days_per_pentad \
+        --lead-windows $lead_windows \
+        --days-per-window $days_per_window \
         --nproc $nproc
 
 done

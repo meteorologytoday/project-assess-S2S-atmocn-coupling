@@ -11,20 +11,20 @@ import ERA5_tools
 archive_root = os.path.join("ERA5_global")
 
 ERA5_longshortname_mapping = {
-    'geopotential'                  : 'z',
-    "surface_pressure": "sp",
-    "mean_sea_level_pressure": "msl",
-    "10m_u_component_of_wind":  "u10",
-    "10m_v_component_of_wind":  "v10",
-    "IVT_x" : "IVT_x",
-    "IVT_y" : "IVT_y",
-    "IVT"   : "IVT",
-    "IWV"   : "IWV",
-    "sea_surface_temperature" : "sst",
-    'mean_surface_sensible_heat_flux'    : 'msshf',
-    'mean_surface_latent_heat_flux'      : 'mslhf',
-    "total_precipitation": "tp",
-
+    'sea_ice_cover'                         : 'siconc',
+    'geopotential'                          : 'z',
+    "surface_pressure"                      : "sp",
+    "mean_sea_level_pressure"               : "msl",
+    "10m_u_component_of_wind"               :  "u10",
+    "10m_v_component_of_wind"               :  "v10",
+    "IVT_x"                                 : "IVT_x",
+    "IVT_y"                                 : "IVT_y",
+    "IVT"                                   : "IVT",
+    "IWV"                                   : "IWV",
+    "sea_surface_temperature"               : "sst",
+    'mean_surface_sensible_heat_flux'       : 'msshf',
+    'mean_surface_latent_heat_flux'         : 'mslhf',
+    "total_precipitation" : "tp",
 }
 
 ERA5_shortlongname_mapping = {

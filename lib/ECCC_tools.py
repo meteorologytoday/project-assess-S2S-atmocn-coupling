@@ -131,6 +131,8 @@ def printValidModelVersionDates():
 
 
 ECCC_longshortname_mapping = {
+    "total_precipitation" : "mtp",
+    "sea_ice_cover" : "ci",
     "geopotential" : "gh",
     "sea_surface_temperature" : "sst",
     'mean_surface_sensible_heat_flux'    : 'msshf',
